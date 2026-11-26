@@ -14,6 +14,7 @@ public sealed class PatientConfiguration : EntityConfiguration<Patient>
         builder.Property(patient => patient.PhoneNumber).HasMaxLength(Patient.PhoneNumberMaxLength).IsRequired();
         builder.Property(patient => patient.Email).HasMaxLength(Patient.EmailMaxLength);
         builder.Property(patient => patient.MedicalNotes).HasMaxLength(Patient.MedicalNotesMaxLength);
+        builder.OwnsOne(patient => patient.Address, OwnedTypeMappings.ConfigureAddress);
 
         builder.HasIndex(patient => patient.FullName);
         builder.HasIndex(patient => patient.PhoneNumber);

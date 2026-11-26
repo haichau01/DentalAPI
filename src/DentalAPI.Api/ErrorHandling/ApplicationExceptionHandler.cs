@@ -57,7 +57,18 @@ public sealed class ApplicationExceptionHandler(
             Title = "Conflict",
             Detail = conflict.Message,
         },
+        AuthenticationFailedException => Problem(StatusCodes.Status401Unauthorized, "Authentication failed", exception),
+        ForbiddenException => Problem(StatusCodes.Status403Forbidden, "Forbidden", exception),
+        InvalidVerificationCodeException => Problem(StatusCodes.Status400BadRequest, "Invalid verification code", exception),
+        VerificationCodeCooldownException => Problem(StatusCodes.Status429TooManyRequests, "Too many requests", exception),
         _ => null,
+    };
+
+    private static ProblemDetails Problem(int status, string title, Exception exception) => new()
+    {
+        Status = status,
+        Title = title,
+        Detail = exception.Message,
     };
 
     private static ValidationProblemDetails ToValidationProblem(ValidationException exception)

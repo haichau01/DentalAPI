@@ -22,6 +22,357 @@ namespace DentalAPI.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.PatientAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid?>("PatientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0 AND [IsEmailVerified] = 1");
+
+                    b.HasIndex("PatientId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0 AND [PatientId] IS NOT NULL");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0 AND [Status] = 'Active'");
+
+                    b.ToTable("PatientAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.StaffAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("FullName");
+
+                    b.ToTable("StaffAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.VerificationCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Channel", "Destination", "SentAt");
+
+                    b.ToTable("VerificationCodes", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Authorization.StaffPermissionOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Effect")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Permission")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("StaffAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StaffAccountId", "Permission")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("StaffPermissionOverrides", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Authorization.StaffRolePermission", b =>
+                {
+                    b.Property<string>("Role")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Permission")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Role", "Permission");
+
+                    b.ToTable("StaffRolePermissions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Role = "Dentist",
+                            Permission = "patients.read"
+                        },
+                        new
+                        {
+                            Role = "Dentist",
+                            Permission = "appointments.read"
+                        },
+                        new
+                        {
+                            Role = "Dentist",
+                            Permission = "treatment-records.read"
+                        },
+                        new
+                        {
+                            Role = "Dentist",
+                            Permission = "treatment-records.write"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "patients.read"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "patients.write"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "appointments.read"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "appointments.write"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "invoices.read"
+                        },
+                        new
+                        {
+                            Role = "Receptionist",
+                            Permission = "invoices.write"
+                        });
+                });
+
             modelBuilder.Entity("DentalAPI.Domain.Patients.Patient", b =>
                 {
                     b.Property<Guid>("Id")
@@ -29,6 +380,9 @@ namespace DentalAPI.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
@@ -60,6 +414,9 @@ namespace DentalAPI.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FullName");
@@ -67,6 +424,184 @@ namespace DentalAPI.Infrastructure.Persistence.Migrations
                     b.HasIndex("PhoneNumber");
 
                     b.ToTable("Patients", (string)null);
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.PatientAccount", b =>
+                {
+                    b.HasOne("DentalAPI.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("DentalAPI.Domain.Accounts.LoginLockout", "Lockout", b1 =>
+                        {
+                            b1.Property<Guid>("PatientAccountId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("FailedCount")
+                                .HasColumnType("int")
+                                .HasColumnName("FailedLoginCount");
+
+                            b1.Property<DateTimeOffset?>("LockedUntil")
+                                .HasColumnType("datetimeoffset")
+                                .HasColumnName("LockedUntil");
+
+                            b1.HasKey("PatientAccountId");
+
+                            b1.ToTable("PatientAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PatientAccountId");
+                        });
+
+                    b.OwnsOne("DentalAPI.Domain.Accounts.PendingPatientProfile", "PendingProfile", b1 =>
+                        {
+                            b1.Property<Guid>("PatientAccountId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateOnly>("DateOfBirth")
+                                .HasColumnType("date");
+
+                            b1.Property<string>("FullName")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)");
+
+                            b1.HasKey("PatientAccountId");
+
+                            b1.ToTable("PatientAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PatientAccountId");
+
+                            b1.OwnsOne("DentalAPI.Domain.Common.Address", "Address", b2 =>
+                                {
+                                    b2.Property<Guid>("PendingPatientProfilePatientAccountId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<string>("Province")
+                                        .IsRequired()
+                                        .HasMaxLength(100)
+                                        .HasColumnType("nvarchar(100)");
+
+                                    b2.Property<string>("StreetLine")
+                                        .HasMaxLength(200)
+                                        .HasColumnType("nvarchar(200)");
+
+                                    b2.Property<string>("Ward")
+                                        .HasMaxLength(100)
+                                        .HasColumnType("nvarchar(100)");
+
+                                    b2.HasKey("PendingPatientProfilePatientAccountId");
+
+                                    b2.ToTable("PatientAccounts");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("PendingPatientProfilePatientAccountId");
+                                });
+
+                            b1.Navigation("Address");
+                        });
+
+                    b.Navigation("Lockout")
+                        .IsRequired();
+
+                    b.Navigation("PendingProfile");
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Accounts.StaffAccount", b =>
+                {
+                    b.OwnsOne("DentalAPI.Domain.Common.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("StaffAccountId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Province")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.Property<string>("StreetLine")
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)");
+
+                            b1.Property<string>("Ward")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.HasKey("StaffAccountId");
+
+                            b1.ToTable("StaffAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StaffAccountId");
+                        });
+
+                    b.OwnsOne("DentalAPI.Domain.Accounts.LoginLockout", "Lockout", b1 =>
+                        {
+                            b1.Property<Guid>("StaffAccountId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("FailedCount")
+                                .HasColumnType("int")
+                                .HasColumnName("FailedLoginCount");
+
+                            b1.Property<DateTimeOffset?>("LockedUntil")
+                                .HasColumnType("datetimeoffset")
+                                .HasColumnName("LockedUntil");
+
+                            b1.HasKey("StaffAccountId");
+
+                            b1.ToTable("StaffAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StaffAccountId");
+                        });
+
+                    b.Navigation("Address");
+
+                    b.Navigation("Lockout")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Authorization.StaffPermissionOverride", b =>
+                {
+                    b.HasOne("DentalAPI.Domain.Accounts.StaffAccount", null)
+                        .WithMany()
+                        .HasForeignKey("StaffAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalAPI.Domain.Patients.Patient", b =>
+                {
+                    b.OwnsOne("DentalAPI.Domain.Common.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("PatientId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Province")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.Property<string>("StreetLine")
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)");
+
+                            b1.Property<string>("Ward")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.HasKey("PatientId");
+
+                            b1.ToTable("Patients");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PatientId");
+                        });
+
+                    b.Navigation("Address");
                 });
 #pragma warning restore 612, 618
         }

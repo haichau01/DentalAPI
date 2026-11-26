@@ -12,6 +12,9 @@ public sealed class InMemoryPatientRepository : IPatientRepository, IUnitOfWork
 
     public IReadOnlyList<Patient> Patients => _patients;
 
+    /// <summary>Patients that already have an account; the database works this out from the PatientAccounts table.</summary>
+    public HashSet<Guid> LinkedPatientIds { get; } = [];
+
     public int SaveChangesCallCount { get; private set; }
 
     public Task<Patient?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
@@ -21,6 +24,15 @@ public sealed class InMemoryPatientRepository : IPatientRepository, IUnitOfWork
     {
         var items = _patients.OrderBy(patient => patient.FullName).Skip(query.Skip).Take(query.PageSize).ToList();
         return Task.FromResult(new PagedResult<Patient>(items, query.Page, query.PageSize, _patients.Count));
+    }
+
+    public Task<IReadOnlyList<Guid>> ListUnlinkedIdsByPhoneAsync(string phoneNumber, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Guid> ids = _patients
+            .Where(patient => patient.PhoneNumber == phoneNumber && !LinkedPatientIds.Contains(patient.Id))
+            .Select(patient => patient.Id)
+            .ToList();
+        return Task.FromResult(ids);
     }
 
     public void Add(Patient patient) => _patients.Add(patient);

@@ -1,9 +1,16 @@
+using DentalAPI.Application.Auth;
+using DentalAPI.Application.Authorization;
 using DentalAPI.Application.Common.Persistence;
+using DentalAPI.Application.Common.Security;
+using DentalAPI.Application.PatientAccounts;
 using DentalAPI.Application.Patients;
+using DentalAPI.Application.StaffAccounts;
+using DentalAPI.Infrastructure.Authorization;
 using DentalAPI.Infrastructure.Persistence;
 using DentalAPI.Infrastructure.Persistence.Interceptors;
 using DentalAPI.Infrastructure.Persistence.Seeding;
 using DentalAPI.Infrastructure.Repositories;
+using DentalAPI.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +21,7 @@ public static class DependencyInjection
 {
     private const string ConnectionStringName = "Default";
 
-    /// <summary>Registers EF Core, repositories and the database health check.</summary>
+    /// <summary>Registers EF Core, repositories, token and password services, and the database health check.</summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         services.AddScoped<AuditAndSoftDeleteInterceptor>();
@@ -37,6 +44,13 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<DentalDbContext>());
         services.AddScoped<IPatientRepository, PatientRepository>();
+        services.AddScoped<IStaffAccountRepository, StaffAccountRepository>();
+        services.AddScoped<IPatientAccountRepository, PatientAccountRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
+
+        services.AddSecurity();
 
         services.AddHealthChecks().AddDbContextCheck<DentalDbContext>("database");
 
@@ -51,5 +65,35 @@ public static class DependencyInjection
 
         await dbContext.Database.MigrateAsync(cancellationToken);
         await DevelopmentDataSeeder.SeedAsync(dbContext, cancellationToken);
+    }
+
+    private static void AddSecurity(this IServiceCollection services)
+    {
+        services.AddOptions<JwtOptions>()
+            .BindConfiguration(JwtOptions.SectionName)
+            .Validate(
+                options => options.HasValidSigningKey(),
+                $"Jwt:SigningKey must be at least {JwtOptions.MinSigningKeyBytes} bytes. Set it with user-secrets or the Jwt__SigningKey environment variable.")
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.Issuer) && !string.IsNullOrWhiteSpace(options.Audience),
+                "Jwt:Issuer and Jwt:Audience must be configured.")
+            .ValidateOnStart();
+
+        services.AddOptions<BootstrapAdminOptions>()
+            .BindConfiguration(BootstrapAdminOptions.SectionName)
+            .Validate(
+                options => !options.IsConfigured || options.Password.Length >= BootstrapAdminOptions.MinPasswordLength,
+                $"BootstrapAdmin:Password must be at least {BootstrapAdminOptions.MinPasswordLength} characters.")
+            .ValidateOnStart();
+
+        services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
+        services.AddSingleton<IVerificationCodeGenerator, VerificationCodeGenerator>();
+        services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+        services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
+
+        services.AddMemoryCache();
+        services.AddSingleton<ILoginAttemptThrottle, MemoryLoginAttemptThrottle>();
+        services.AddSingleton<PermissionCache>();
+        services.AddScoped<IEffectivePermissionProvider, CachedEffectivePermissionProvider>();
     }
 }

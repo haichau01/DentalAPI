@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using DentalAPI.Application.Common.Addresses;
 using DentalAPI.Application.Common.Pagination;
 using DentalAPI.Application.Patients;
 using DentalAPI.IntegrationTests.Infrastructure;
@@ -9,11 +10,44 @@ using Microsoft.AspNetCore.Mvc;
 namespace DentalAPI.IntegrationTests;
 
 [Collection(ApiCollection.Name)]
-public sealed class PatientsEndpointTests(DentalApiFactory factory)
+public sealed class PatientsEndpointTests(DentalApiFactory factory) : IAsyncLifetime
 {
     private const string PatientsUrl = "/api/v1/patients";
 
-    private readonly HttpClient _client = factory.CreateClient();
+    // Patient endpoints require a staff permission; the admin holds all of them.
+    private HttpClient _client = null!;
+
+    public async Task InitializeAsync() => _client = await factory.CreateAdminClientAsync();
+
+    public Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Create_WithAddress_ReturnsAddress()
+    {
+        var request = ValidRequest() with { Address = new AddressDto("12 Hang Bai", "Phuong Hoan Kiem", "Ha Noi") };
+
+        var response = await _client.PostAsJsonAsync(PatientsUrl, request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await response.Content.ReadFromJsonAsync<PatientDto>();
+        created!.Address.Should().Be(request.Address);
+    }
+
+    [Fact]
+    public async Task Create_AddressWithoutProvince_Returns400WithAddressError()
+    {
+        var request = ValidRequest() with { Address = new AddressDto("12 Hang Bai", "Phuong Hoan Kiem", string.Empty) };
+
+        var response = await _client.PostAsJsonAsync(PatientsUrl, request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        problem!.Errors.Keys.Should().Contain("Address.Province");
+    }
 
     [Fact]
     public async Task Create_ValidRequest_Returns201WithLocationOfNewPatient()

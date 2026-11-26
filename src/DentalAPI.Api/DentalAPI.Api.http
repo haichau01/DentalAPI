@@ -1,19 +1,178 @@
 # Requests for manual testing. Works with the VS Code REST Client extension or Visual Studio.
 # Docker: http://localhost:8080   dotnet run: http://localhost:5228
+# Fake data only. Admin credentials are BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD from your .env (not committed).
 @baseUrl = http://localhost:8080
 @patientId = 00000000-0000-0000-0000-000000000000
+@staffAccountId = 00000000-0000-0000-0000-000000000000
+@adminEmail = admin@example.com
+@adminPassword = <BOOTSTRAP_ADMIN_PASSWORD from .env>
+@patientPhone = 0912345678
 
-### Health check
+### Health check (no token needed)
 GET {{baseUrl}}/health
+
+# ---------------------------------------------------------------- Staff sign-in
+
+### Staff login (admin)
+# @name staffLogin
+POST {{baseUrl}}/api/v1/auth/staff/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+@staffToken = {{staffLogin.response.body.accessToken}}
+@staffRefreshToken = {{staffLogin.response.body.refreshToken}}
+
+### Staff login with wrong password -> 401
+POST {{baseUrl}}/api/v1/auth/staff/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "wrong-password-1"
+}
+
+### Change own password (required before a new dentist/receptionist can use other endpoints)
+POST {{baseUrl}}/api/v1/auth/staff/change-password
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "Initial-Passw0rd",
+  "newPassword": "New-Passw0rd-2"
+}
+
+### Refresh tokens (the old refresh token stops working)
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{staffRefreshToken}}"
+}
+
+### Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{staffRefreshToken}}"
+}
+
+# ---------------------------------------------------------------- Staff accounts (admin)
+
+### List staff accounts
+GET {{baseUrl}}/api/v1/staff-accounts?page=1&pageSize=20
+Authorization: Bearer {{staffToken}}
+
+### Create a receptionist (must change the initial password at first sign-in)
+POST {{baseUrl}}/api/v1/staff-accounts
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "email": "receptionist@example.com",
+  "initialPassword": "Initial-Passw0rd",
+  "role": "Receptionist",
+  "fullName": "Le Thi Le Tan",
+  "phoneNumber": "0901111111",
+  "address": {
+    "streetLine": "1 Le Loi",
+    "ward": "Phuong Ben Thanh",
+    "province": "TP Ho Chi Minh"
+  }
+}
+
+### Create an admin -> 400 (admins only come from configuration)
+POST {{baseUrl}}/api/v1/staff-accounts
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "email": "another-admin@example.com",
+  "initialPassword": "Initial-Passw0rd",
+  "role": "Admin",
+  "fullName": "Admin Khac",
+  "phoneNumber": "0902222222"
+}
+
+### Update a staff member's profile
+PUT {{baseUrl}}/api/v1/staff-accounts/{{staffAccountId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Le Thi Le Tan",
+  "phoneNumber": "0901111112",
+  "address": { "streetLine": null, "ward": "Phuong Sai Gon", "province": "TP Ho Chi Minh" }
+}
+
+### Delete a staff account (soft delete, signs it out)
+DELETE {{baseUrl}}/api/v1/staff-accounts/{{staffAccountId}}
+Authorization: Bearer {{staffToken}}
+
+# ---------------------------------------------------------------- Permissions (admin)
+
+### List permission codes
+GET {{baseUrl}}/api/v1/permissions
+Authorization: Bearer {{staffToken}}
+
+### Permissions of a role
+GET {{baseUrl}}/api/v1/staff-roles/Receptionist/permissions
+Authorization: Bearer {{staffToken}}
+
+### Replace the permissions of a role
+PUT {{baseUrl}}/api/v1/staff-roles/Dentist/permissions
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "permissions": ["patients.read", "appointments.read", "treatment-records.read", "treatment-records.write"]
+}
+
+### Effective permissions of one staff member
+GET {{baseUrl}}/api/v1/staff-accounts/{{staffAccountId}}/permissions
+Authorization: Bearer {{staffToken}}
+
+### Grant / revoke permissions for one staff member
+PUT {{baseUrl}}/api/v1/staff-accounts/{{staffAccountId}}/permission-overrides
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "grants": ["patients.delete"],
+  "revokes": ["invoices.write"]
+}
+
+### Same code granted and revoked -> 400
+PUT {{baseUrl}}/api/v1/staff-accounts/{{staffAccountId}}/permission-overrides
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "grants": ["patients.delete"],
+  "revokes": ["patients.delete"]
+}
+
+# ---------------------------------------------------------------- Patients (staff, needs patients.* permissions)
+
+### List patients without a token -> 401
+GET {{baseUrl}}/api/v1/patients
 
 ### List patients
 GET {{baseUrl}}/api/v1/patients?page=1&pageSize=20
+Authorization: Bearer {{staffToken}}
 
 ### Get a patient
 GET {{baseUrl}}/api/v1/patients/{{patientId}}
+Authorization: Bearer {{staffToken}}
 
 ### Create a patient (fake data only)
 POST {{baseUrl}}/api/v1/patients
+Authorization: Bearer {{staffToken}}
 Content-Type: application/json
 
 {
@@ -21,21 +180,29 @@ Content-Type: application/json
   "dateOfBirth": "1995-03-20",
   "phoneNumber": "0900000004",
   "email": "d@example.com",
-  "medicalNotes": null
+  "medicalNotes": null,
+  "address": {
+    "streetLine": "12 Hang Bai",
+    "ward": "Phuong Hoan Kiem",
+    "province": "Ha Noi"
+  }
 }
 
 ### Create a patient with invalid data -> 400
 POST {{baseUrl}}/api/v1/patients
+Authorization: Bearer {{staffToken}}
 Content-Type: application/json
 
 {
   "fullName": "",
   "dateOfBirth": "2999-01-01",
-  "phoneNumber": "abc"
+  "phoneNumber": "abc",
+  "address": { "ward": "Phuong Hoan Kiem", "province": "" }
 }
 
 ### Update a patient
 PUT {{baseUrl}}/api/v1/patients/{{patientId}}
+Authorization: Bearer {{staffToken}}
 Content-Type: application/json
 
 {
@@ -43,8 +210,93 @@ Content-Type: application/json
   "dateOfBirth": "1995-03-20",
   "phoneNumber": "0900000005",
   "email": null,
-  "medicalNotes": "Allergic to latex"
+  "medicalNotes": "Allergic to latex",
+  "address": null
 }
 
 ### Delete a patient
 DELETE {{baseUrl}}/api/v1/patients/{{patientId}}
+Authorization: Bearer {{staffToken}}
+
+# ---------------------------------------------------------------- Patient self-service
+
+### Register a patient account -> 202, a code is sent by SMS
+POST {{baseUrl}}/api/v1/auth/patients/register
+Content-Type: application/json
+
+{
+  "fullName": "Tran Van E",
+  "dateOfBirth": "1992-04-01",
+  "phoneNumber": "{{patientPhone}}",
+  "email": null,
+  "password": "Patient-Passw0rd",
+  "address": { "streetLine": null, "ward": null, "province": "Da Nang" }
+}
+
+### Read the code from the fake SMS outbox (Development only)
+GET {{baseUrl}}/dev/outbox/{{patientPhone}}
+
+### Verify the phone -> 200 with tokens
+# @name verifyPhone
+POST {{baseUrl}}/api/v1/auth/patients/verify-phone
+Content-Type: application/json
+
+{
+  "phoneNumber": "{{patientPhone}}",
+  "code": "123456"
+}
+
+### Resend the code (wait 60 seconds between codes)
+POST {{baseUrl}}/api/v1/auth/patients/resend-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "{{patientPhone}}"
+}
+
+### Patient login with phone number or verified email
+# @name patientLogin
+POST {{baseUrl}}/api/v1/auth/patients/login
+Content-Type: application/json
+
+{
+  "identifier": "{{patientPhone}}",
+  "password": "Patient-Passw0rd"
+}
+
+@patientToken = {{patientLogin.response.body.accessToken}}
+
+### Own patient record
+GET {{baseUrl}}/api/v1/me/profile
+Authorization: Bearer {{patientToken}}
+
+### Change own address
+PUT {{baseUrl}}/api/v1/me/address
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "address": { "streetLine": "5 Bach Dang", "ward": "Phuong Hai Chau", "province": "Da Nang" }
+}
+
+### Add a sign-in email and send a code to it
+POST {{baseUrl}}/api/v1/me/email/send-code
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "email": "e@example.com"
+}
+
+### Verify the email
+POST {{baseUrl}}/api/v1/me/email/verify
+Authorization: Bearer {{patientToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+### Patient calling a staff endpoint -> 403
+GET {{baseUrl}}/api/v1/patients
+Authorization: Bearer {{patientToken}}

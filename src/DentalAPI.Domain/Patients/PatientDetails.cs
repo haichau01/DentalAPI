@@ -1,3 +1,5 @@
+using DentalAPI.Domain.Common;
+
 namespace DentalAPI.Domain.Patients;
 
 /// <summary>The editable details of a patient, grouped so constructors and updates take one argument.</summary>
@@ -6,4 +8,5 @@ public sealed record PatientDetails(
     DateOnly DateOfBirth,
     string PhoneNumber,
     string? Email,
-    string? MedicalNotes);
+    string? MedicalNotes,
+    Address? Address = null);
