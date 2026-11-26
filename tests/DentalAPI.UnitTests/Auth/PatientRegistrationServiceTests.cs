@@ -31,6 +31,19 @@ public sealed class PatientRegistrationServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_PhoneWithPendingRegistration_ReplacesDetailsWithoutSecondAccount()
+    {
+        await _service.RegisterAsync(ValidRequest(), CancellationToken.None);
+        _harness.TimeProvider.Advance(Domain.Accounts.VerificationCode.ResendCooldown);
+
+        await _service.RegisterAsync(ValidRequest() with { FullName = "Ten Da Sua", Email = null }, CancellationToken.None);
+
+        var account = _harness.PatientAccounts.Accounts.Should().ContainSingle().Subject;
+        account.PendingProfile!.FullName.Should().Be("Ten Da Sua");
+        account.Email.Should().BeNull();
+    }
+
+    [Fact]
     public async Task RegisterAsync_PhoneOfActiveAccount_ThrowsPhoneNumberAlreadyRegistered()
     {
         _harness.AddActivePatientAccount(Phone);

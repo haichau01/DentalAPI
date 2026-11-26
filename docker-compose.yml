@@ -4,8 +4,9 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${SA_PASSWORD:?Set SA_PASSWORD in .env (copy .env.example)}
+    # Bound to loopback only: the dev database must not be reachable from other machines on the network.
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
     volumes:
       - dental-db-data:/var/opt/mssql
     healthcheck:
@@ -26,8 +27,9 @@ services:
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (copy .env.example)}
       BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:?Set BOOTSTRAP_ADMIN_EMAIL in .env (copy .env.example)}
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:?Set BOOTSTRAP_ADMIN_PASSWORD in .env (copy .env.example)}
+    # Loopback only: Development exposes /dev/outbox (verification codes) and must stay on this machine.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
 volumes:
   dental-db-data:

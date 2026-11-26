@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IPatientRegistrationService, PatientRegistrationService>();
         services.AddScoped<IPatientLoginService, PatientLoginService>();
         services.AddScoped<IPatientEmailVerificationService, PatientEmailVerificationService>();
+        services.AddScoped<ExpiredRegistrationCleaner>();
 
         services.AddScoped<IStaffLoginService, StaffLoginService>();
         services.AddScoped<IStaffAccountService, StaffAccountService>();

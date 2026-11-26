@@ -1,9 +1,11 @@
 using DentalAPI.Api.Authentication;
+using DentalAPI.Api.RateLimiting;
 using DentalAPI.Application.PatientAccounts;
 using DentalAPI.Application.Patients;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DentalAPI.Api.Controllers;
 
@@ -22,9 +24,9 @@ public sealed class MeController(
     IPatientEmailVerificationService emailVerificationService) : ControllerBase
 {
     [HttpGet("profile")]
-    [EndpointSummary("Get the signed-in patient's own record")]
-    [ProducesResponseType<PatientDto>(StatusCodes.Status200OK)]
-    public async Task<Ok<PatientDto>> GetProfile(CancellationToken cancellationToken)
+    [EndpointSummary("Get the signed-in patient's own record (without staff clinical notes)")]
+    [ProducesResponseType<PatientProfileDto>(StatusCodes.Status200OK)]
+    public async Task<Ok<PatientProfileDto>> GetProfile(CancellationToken cancellationToken)
     {
         var patient = await currentPatientService.GetProfileAsync(cancellationToken);
         return TypedResults.Ok(patient);
@@ -32,19 +34,19 @@ public sealed class MeController(
 
     [HttpPut("address")]
     [EndpointSummary("Change the signed-in patient's address (null clears it)")]
-    [ProducesResponseType<PatientDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<PatientProfileDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<Ok<PatientDto>> UpdateAddress(UpdateAddressRequest request, CancellationToken cancellationToken)
+    public async Task<Ok<PatientProfileDto>> UpdateAddress(UpdateAddressRequest request, CancellationToken cancellationToken)
     {
         var patient = await currentPatientService.UpdateAddressAsync(request, cancellationToken);
         return TypedResults.Ok(patient);
     }
 
     [HttpPost("email/send-code")]
-    [EndpointSummary("Set a sign-in email and send a verification code to it")]
+    [EnableRateLimiting(RateLimitingSetup.AccountVerificationPolicy)]
+    [EndpointSummary("Set a sign-in email and send a verification code to it (always 202, even if the email is taken)")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<Accepted> SendEmailCode(SendEmailVerificationCodeRequest request, CancellationToken cancellationToken)
     {
@@ -53,10 +55,12 @@ public sealed class MeController(
     }
 
     [HttpPost("email/verify")]
+    [EnableRateLimiting(RateLimitingSetup.AccountVerificationPolicy)]
     [EndpointSummary("Verify the email with the code so it can be used to sign in")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<NoContent> VerifyEmail(VerifyEmailRequest request, CancellationToken cancellationToken)
     {
         await emailVerificationService.VerifyAsync(request, cancellationToken);

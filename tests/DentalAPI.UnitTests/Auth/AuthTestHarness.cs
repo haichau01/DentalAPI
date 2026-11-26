@@ -40,6 +40,10 @@ internal sealed class AuthTestHarness
 
     public CountingUnitOfWork UnitOfWork { get; } = new();
 
+    public FakeClientContext ClientContext { get; } = new();
+
+    public FakeLoginAttemptThrottle LoginThrottle { get; } = new();
+
     public FakeRefreshTokenFactory RefreshTokenFactory => _refreshTokenFactory ??= new FakeRefreshTokenFactory(TimeProvider);
 
     public RecordingPermissionProvider PermissionProvider =>
@@ -51,7 +55,12 @@ internal sealed class AuthTestHarness
     public TokenPairIssuer CreateTokenPairIssuer() =>
         new(new FakeAccessTokenIssuer(TimeProvider), RefreshTokenFactory, RefreshTokens);
 
-    public PasswordCredentialChecker CreateCredentialChecker() => new(PasswordHasher, UnitOfWork, TimeProvider);
+    public PasswordCredentialChecker CreateCredentialChecker() =>
+        new(PasswordHasher, LoginThrottle, ClientContext, UnitOfWork, TimeProvider);
+
+    public PatientEmailVerificationService CreateEmailVerificationService() => new(
+        CurrentUser, PatientAccounts, CreateVerificationCodeService(), UnitOfWork,
+        new SendEmailVerificationCodeRequestValidator(), new VerifyEmailRequestValidator());
 
     public VerificationCodeService CreateVerificationCodeService() =>
         new(VerificationCodes, CodeGenerator, Messages, Messages, UnitOfWork, TimeProvider);

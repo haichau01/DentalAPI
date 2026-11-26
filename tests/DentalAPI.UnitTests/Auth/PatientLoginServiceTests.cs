@@ -1,3 +1,4 @@
+using DentalAPI.Application.Auth;
 using DentalAPI.Application.Common.Exceptions;
 using DentalAPI.Application.PatientAccounts;
 using DentalAPI.Domain.Accounts;
@@ -76,6 +77,37 @@ public sealed class PatientLoginServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_TooManyWrongPasswordsFromOneClient_BlocksThatClientOnly()
+    {
+        var account = _harness.AddActivePatientAccount();
+        _harness.ClientContext.ClientAddress = "198.51.100.7";
+        for (var attempt = 0; attempt < ILoginAttemptThrottle.MaxFailuresPerClient; attempt++)
+        {
+            await CatchLoginAsync(account.PhoneNumber, "Wrong12345");
+        }
+
+        var attackerWithRightPassword = () => _service.LoginAsync(new(account.PhoneNumber, AuthTestHarness.Password), CancellationToken.None);
+        await attackerWithRightPassword.Should().ThrowAsync<AuthenticationFailedException>();
+
+        _harness.ClientContext.ClientAddress = "203.0.113.20";
+        var owner = await _service.LoginAsync(new(account.PhoneNumber, AuthTestHarness.Password), CancellationToken.None);
+
+        owner.AccessToken.Should().NotBeEmpty();
+        account.Lockout.IsLocked(AuthTestHarness.UtcNow).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoginAsync_UnknownPhoneRepeatedly_IsThrottledLikeRealAccounts()
+    {
+        for (var attempt = 0; attempt < ILoginAttemptThrottle.MaxFailuresPerClient; attempt++)
+        {
+            await CatchLoginAsync("0999999999", AuthTestHarness.Password);
+        }
+
+        _harness.LoginThrottle.IsBlocked("0999999999", _harness.ClientContext.ClientAddress).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task LoginAsync_LockedAccountWithCorrectPassword_ThrowsAuthenticationFailed()
     {
         var account = _harness.AddActivePatientAccount();
@@ -86,6 +118,13 @@ public sealed class PatientLoginServiceTests
 
         var act = () => _service.LoginAsync(new(account.PhoneNumber, AuthTestHarness.Password), CancellationToken.None);
 
+        await act.Should().ThrowAsync<AuthenticationFailedException>();
+        _harness.PasswordHasher.DummyVerificationCount.Should().Be(1);
+    }
+
+    private async Task CatchLoginAsync(string identifier, string password)
+    {
+        var act = () => _service.LoginAsync(new(identifier, password), CancellationToken.None);
         await act.Should().ThrowAsync<AuthenticationFailedException>();
     }
 }

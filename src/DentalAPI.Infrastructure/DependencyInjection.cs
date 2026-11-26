@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
 
         services.AddMemoryCache();
+        services.AddSingleton<ILoginAttemptThrottle, MemoryLoginAttemptThrottle>();
         services.AddSingleton<PermissionCache>();
         services.AddScoped<IEffectivePermissionProvider, CachedEffectivePermissionProvider>();
     }

@@ -18,9 +18,7 @@ public sealed class DentalApiFactory : WebApplicationFactory<Program>, IAsyncLif
     private const string HighRateLimit = "100000";
     private const int SigningKeyBytes = 48;
 
-    private readonly MsSqlContainer _database = new MsSqlBuilder()
-        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-        .Build();
+    private readonly MsSqlContainer _database = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
     public async Task InitializeAsync() => await _database.StartAsync();
 
@@ -38,5 +36,6 @@ public sealed class DentalApiFactory : WebApplicationFactory<Program>, IAsyncLif
         builder.UseSetting("BootstrapAdmin:Email", AdminEmail);
         builder.UseSetting("BootstrapAdmin:Password", AdminPassword);
         builder.UseSetting("RateLimiting:PublicAuth:PermitLimit", HighRateLimit);
+        builder.UseSetting("RateLimiting:AccountVerification:PermitLimit", HighRateLimit);
     }
 }

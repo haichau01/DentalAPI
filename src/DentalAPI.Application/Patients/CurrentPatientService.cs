@@ -24,10 +24,10 @@ public sealed class UpdateAddressRequestValidator : AbstractValidator<UpdateAddr
 public interface ICurrentPatientService
 {
     /// <exception cref="ForbiddenException">The caller is not a linked patient.</exception>
-    Task<PatientDto> GetProfileAsync(CancellationToken cancellationToken);
+    Task<PatientProfileDto> GetProfileAsync(CancellationToken cancellationToken);
 
     /// <exception cref="ValidationException">The address is invalid.</exception>
-    Task<PatientDto> UpdateAddressAsync(UpdateAddressRequest request, CancellationToken cancellationToken);
+    Task<PatientProfileDto> UpdateAddressAsync(UpdateAddressRequest request, CancellationToken cancellationToken);
 }
 
 public sealed class CurrentPatientService(
@@ -36,13 +36,13 @@ public sealed class CurrentPatientService(
     IUnitOfWork unitOfWork,
     IValidator<UpdateAddressRequest> requestValidator) : ICurrentPatientService
 {
-    public async Task<PatientDto> GetProfileAsync(CancellationToken cancellationToken)
+    public async Task<PatientProfileDto> GetProfileAsync(CancellationToken cancellationToken)
     {
         var patient = await GetCurrentPatientAsync(cancellationToken);
-        return PatientDto.FromEntity(patient);
+        return PatientProfileDto.FromEntity(patient);
     }
 
-    public async Task<PatientDto> UpdateAddressAsync(UpdateAddressRequest request, CancellationToken cancellationToken)
+    public async Task<PatientProfileDto> UpdateAddressAsync(UpdateAddressRequest request, CancellationToken cancellationToken)
     {
         await requestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
@@ -50,7 +50,7 @@ public sealed class CurrentPatientService(
         patient.ChangeAddress(request.Address?.ToDomain());
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return PatientDto.FromEntity(patient);
+        return PatientProfileDto.FromEntity(patient);
     }
 
     private async Task<Patient> GetCurrentPatientAsync(CancellationToken cancellationToken)

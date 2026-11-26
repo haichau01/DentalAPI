@@ -19,5 +19,9 @@ public interface IVerificationCodeRepository
     /// <summary>Returns the most recently sent code for the destination, used or not.</summary>
     Task<VerificationCode?> GetLatestAsync(VerificationChannel channel, string destination, CancellationToken cancellationToken);
 
+    /// <summary>Permanently deletes codes sent before the cutoff; they only matter during their short lifetime.</summary>
+    /// <returns>The number of deleted codes.</returns>
+    Task<int> DeleteSentBeforeAsync(DateTimeOffset cutoff, CancellationToken cancellationToken);
+
     void Add(VerificationCode verificationCode);
 }

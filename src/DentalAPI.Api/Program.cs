@@ -1,10 +1,13 @@
 using System.Text.Json.Serialization;
 using DentalAPI.Api.Authentication;
+using DentalAPI.Api.BackgroundJobs;
 using DentalAPI.Api.Development;
 using DentalAPI.Api.ErrorHandling;
+using DentalAPI.Api.Networking;
 using DentalAPI.Api.OpenApi;
 using DentalAPI.Api.RateLimiting;
 using DentalAPI.Application;
+using DentalAPI.Application.Common.Security;
 using DentalAPI.Infrastructure;
 using DentalAPI.Infrastructure.Notifications;
 using DentalAPI.Infrastructure.Security;
@@ -16,6 +19,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddDentalAuthentication();
 builder.Services.AddDentalRateLimiting();
+builder.Services.AddTrustedForwardedHeaders(builder.Configuration);
+builder.Services.AddScoped<IClientContext, HttpContextClientContext>();
+builder.Services.AddHostedService<ExpiredRegistrationCleanupWorker>();
 
 // No real SMS or email provider is integrated yet. Failing at startup outside Development keeps a deployment
 // from silently accepting registrations whose verification codes can never arrive.
@@ -38,10 +44,13 @@ builder.Logging.AddFilter("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMidd
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
-app.UseRateLimiter();
 app.UseAuthentication();
+
+// After authentication, because some limits are counted per signed-in account.
+app.UseRateLimiter();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())

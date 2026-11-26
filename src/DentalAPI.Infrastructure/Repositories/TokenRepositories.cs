@@ -26,5 +26,13 @@ public sealed class VerificationCodeRepository(DentalDbContext dbContext) : IVer
             .OrderByDescending(code => code.SentAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    // Hard delete on purpose: expired codes have no history value and their destination is a phone or email.
+    // IgnoreQueryFilters so soft-deleted codes are removed too.
+    public Task<int> DeleteSentBeforeAsync(DateTimeOffset cutoff, CancellationToken cancellationToken) =>
+        dbContext.VerificationCodes
+            .IgnoreQueryFilters()
+            .Where(code => code.SentAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+
     public void Add(VerificationCode verificationCode) => dbContext.VerificationCodes.Add(verificationCode);
 }

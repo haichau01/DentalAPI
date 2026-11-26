@@ -72,7 +72,7 @@ public sealed class PatientAuthEndpointTests(DentalApiFactory factory)
         var existing = await CreatePatientRecordAsReceptionAsync(phone);
 
         var patient = await factory.CreatePatientClientAsync("+84" + phone[1..]);
-        var profile = await patient.Client.GetFromJsonAsync<PatientDto>("/api/v1/me/profile");
+        var profile = await patient.Client.GetFromJsonAsync<PatientProfileDto>("/api/v1/me/profile");
 
         profile!.Id.Should().Be(existing.Id);
         profile.FullName.Should().Be("Ho So Le Tan");

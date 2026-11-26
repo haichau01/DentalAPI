@@ -27,6 +27,15 @@ public sealed class InMemoryPatientAccountRepository : IPatientAccountRepository
     public Task<bool> IsVerifiedEmailInUseAsync(string email, Guid excludeAccountId, CancellationToken cancellationToken) =>
         Task.FromResult(Accounts.Any(account => account.Email == email && account.IsEmailVerified && account.Id != excludeAccountId));
 
+    public DateTimeOffset? LastPurgeCutoff { get; private set; }
+
+    /// <summary>Records the cutoff; audit timestamps are set by the database layer, so in memory nothing is old.</summary>
+    public Task<int> DeletePendingNotUpdatedSinceAsync(DateTimeOffset cutoff, CancellationToken cancellationToken)
+    {
+        LastPurgeCutoff = cutoff;
+        return Task.FromResult(0);
+    }
+
     public void Add(PatientAccount account) => Accounts.Add(account);
 
     public void Remove(PatientAccount account) => Accounts.Remove(account);
@@ -81,6 +90,9 @@ public sealed class InMemoryVerificationCodeRepository : IVerificationCodeReposi
 
     public Task<VerificationCode?> GetLatestAsync(VerificationChannel channel, string destination, CancellationToken cancellationToken) =>
         Task.FromResult(Codes.LastOrDefault(code => code.Channel == channel && code.Destination == destination));
+
+    public Task<int> DeleteSentBeforeAsync(DateTimeOffset cutoff, CancellationToken cancellationToken) =>
+        Task.FromResult(Codes.RemoveAll(code => code.SentAt < cutoff));
 
     public void Add(VerificationCode verificationCode) => Codes.Add(verificationCode);
 }

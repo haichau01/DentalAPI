@@ -10,8 +10,11 @@ namespace DentalAPI.Application.PatientAccounts;
 /// <summary>Lets a signed-in patient add an email and verify it so it can be used to sign in.</summary>
 public interface IPatientEmailVerificationService
 {
-    /// <summary>Sets the account's email (unverified) and sends a code to it.</summary>
-    /// <exception cref="EmailAlreadyInUseException">Another account signs in with this email.</exception>
+    /// <summary>
+    /// Sets the account's email (unverified) and sends a code to it. When another account already signs in with
+    /// the email, nothing is changed or sent but the call still succeeds, so it cannot be used to find out
+    /// which emails are registered; verifying then fails with an invalid code.
+    /// </summary>
     /// <exception cref="VerificationCodeCooldownException">A code was sent too recently.</exception>
     Task SendCodeAsync(SendEmailVerificationCodeRequest request, CancellationToken cancellationToken);
 
@@ -34,7 +37,10 @@ public sealed class PatientEmailVerificationService(
 
         var account = await GetCurrentAccountAsync(cancellationToken);
         var email = PatientAccount.NormalizeEmail(request.Email)!;
-        await EnsureEmailIsFreeAsync(email, account.Id, cancellationToken);
+        if (await accountRepository.IsVerifiedEmailInUseAsync(email, account.Id, cancellationToken))
+        {
+            return;
+        }
 
         account.ChangeEmail(email);
         await verificationCodeService.SendAsync(VerificationChannel.Email, email, cancellationToken);
@@ -51,7 +57,12 @@ public sealed class PatientEmailVerificationService(
         }
 
         await verificationCodeService.VerifyAsync(VerificationChannel.Email, account.Email, request.Code, cancellationToken);
-        await EnsureEmailIsFreeAsync(account.Email, account.Id, cancellationToken);
+
+        // The code proves ownership, so revealing a conflict here leaks nothing; it covers a race with another account.
+        if (await accountRepository.IsVerifiedEmailInUseAsync(account.Email, account.Id, cancellationToken))
+        {
+            throw new EmailAlreadyInUseException();
+        }
 
         account.MarkEmailVerified();
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -62,13 +73,5 @@ public sealed class PatientEmailVerificationService(
         var accountId = currentUser.GetRequiredAccountId(AccountType.Patient);
         return await accountRepository.GetByIdAsync(accountId, cancellationToken)
             ?? throw new ForbiddenException();
-    }
-
-    private async Task EnsureEmailIsFreeAsync(string email, Guid accountId, CancellationToken cancellationToken)
-    {
-        if (await accountRepository.IsVerifiedEmailInUseAsync(email, accountId, cancellationToken))
-        {
-            throw new EmailAlreadyInUseException();
-        }
     }
 }

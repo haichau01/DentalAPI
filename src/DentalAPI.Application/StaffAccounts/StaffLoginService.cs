@@ -33,8 +33,9 @@ public sealed class StaffLoginService(
     {
         await loginValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var account = await accountRepository.GetByEmailAsync(StaffAccount.NormalizeEmail(request.Email), cancellationToken);
-        await credentialChecker.EnsureValidAsync(account, request.Password, cancellationToken);
+        var email = StaffAccount.NormalizeEmail(request.Email);
+        var account = await accountRepository.GetByEmailAsync(email, cancellationToken);
+        await credentialChecker.EnsureValidAsync(email, account, request.Password, cancellationToken);
 
         var issued = tokenPairIssuer.Issue(AccessTokenSubject.ForStaff(account!));
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -48,7 +49,7 @@ public sealed class StaffLoginService(
 
         var accountId = currentUser.GetRequiredAccountId(AccountType.Staff);
         var account = await accountRepository.GetByIdAsync(accountId, cancellationToken);
-        await credentialChecker.EnsureValidAsync(account, request.CurrentPassword, cancellationToken);
+        await credentialChecker.EnsureValidAsync(accountId.ToString(), account, request.CurrentPassword, cancellationToken);
 
         account!.ChangePassword(passwordHasher.Hash(request.NewPassword));
         await refreshTokenService.RevokeAllAsync(account.Id, cancellationToken);

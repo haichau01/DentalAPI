@@ -1,3 +1,4 @@
+using DentalAPI.Application.Auth;
 using DentalAPI.Application.Authorization;
 using DentalAPI.Application.Common.Notifications;
 using DentalAPI.Application.Common.Persistence;
@@ -78,6 +79,27 @@ public sealed class FakeCurrentUser : ICurrentUser
     public AccountType? AccountType { get; set; }
 
     public Guid? PatientId { get; set; }
+}
+
+public sealed class FakeClientContext : IClientContext
+{
+    public string ClientAddress { get; set; } = "203.0.113.10";
+}
+
+/// <summary>Counts failures per key like the real throttle, without expiry.</summary>
+public sealed class FakeLoginAttemptThrottle : ILoginAttemptThrottle
+{
+    private readonly Dictionary<string, int> _failures = [];
+
+    public bool IsBlocked(string identifier, string clientAddress) =>
+        _failures.GetValueOrDefault(Key(identifier, clientAddress)) >= ILoginAttemptThrottle.MaxFailuresPerClient;
+
+    public void RecordFailure(string identifier, string clientAddress) =>
+        _failures[Key(identifier, clientAddress)] = _failures.GetValueOrDefault(Key(identifier, clientAddress)) + 1;
+
+    public void Reset(string identifier, string clientAddress) => _failures.Remove(Key(identifier, clientAddress));
+
+    private static string Key(string identifier, string clientAddress) => $"{clientAddress}|{identifier}";
 }
 
 public sealed class CountingUnitOfWork : IUnitOfWork

@@ -28,8 +28,9 @@ public sealed class PatientLoginService(
     {
         await requestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var account = await FindActiveAccountAsync(request.Identifier, cancellationToken);
-        await credentialChecker.EnsureValidAsync(account, request.Password, cancellationToken);
+        var identifier = NormalizeIdentifier(request.Identifier);
+        var account = await FindActiveAccountAsync(identifier, cancellationToken);
+        await credentialChecker.EnsureValidAsync(identifier, account, request.Password, cancellationToken);
 
         var issued = tokenPairIssuer.Issue(AccessTokenSubject.ForPatient(account!));
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -37,8 +38,13 @@ public sealed class PatientLoginService(
         return issued.Tokens;
     }
 
+    private static bool IsEmail(string identifier) => identifier.Contains(EmailMarker);
+
+    private static string NormalizeIdentifier(string identifier) =>
+        IsEmail(identifier) ? PatientAccount.NormalizeEmail(identifier)! : PhoneNumber.Normalize(identifier);
+
     private Task<PatientAccount?> FindActiveAccountAsync(string identifier, CancellationToken cancellationToken) =>
-        identifier.Contains(EmailMarker)
-            ? accountRepository.GetActiveByVerifiedEmailAsync(PatientAccount.NormalizeEmail(identifier)!, cancellationToken)
-            : accountRepository.GetActiveByPhoneAsync(PhoneNumber.Normalize(identifier), cancellationToken);
+        IsEmail(identifier)
+            ? accountRepository.GetActiveByVerifiedEmailAsync(identifier, cancellationToken)
+            : accountRepository.GetActiveByPhoneAsync(identifier, cancellationToken);
 }

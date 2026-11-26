@@ -5,6 +5,7 @@ using DentalAPI.Application.StaffAccounts;
 using DentalAPI.Domain.Accounts;
 using DentalAPI.IntegrationTests.Infrastructure;
 using FluentAssertions;
+using ILoginAttemptThrottle = DentalAPI.Application.Auth.ILoginAttemptThrottle;
 
 namespace DentalAPI.IntegrationTests;
 
@@ -41,10 +42,10 @@ public sealed class StaffAuthEndpointTests(DentalApiFactory factory)
     }
 
     [Fact]
-    public async Task Login_SixthAttemptAfterFiveWrongPasswords_Returns401EvenWithCorrectPassword()
+    public async Task Login_CorrectPasswordAfterTooManyWrongOnesFromSameClient_Returns401()
     {
         var account = await factory.CreateStaffAccountAsync(StaffRole.Dentist);
-        for (var attempt = 0; attempt < LoginLockout.MaxFailedAttempts; attempt++)
+        for (var attempt = 0; attempt < ILoginAttemptThrottle.MaxFailuresPerClient; attempt++)
         {
             await _client.PostAsJsonAsync(LoginUrl, new StaffLoginRequest(account.Email, "Wrong-Passw0rd"));
         }

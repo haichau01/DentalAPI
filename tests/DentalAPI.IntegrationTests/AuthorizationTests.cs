@@ -83,10 +83,12 @@ public sealed class AuthorizationTests(DentalApiFactory factory)
         var phone = TestAccounts.NewPhoneNumber();
         var patient = await factory.CreatePatientClientAsync(phone);
 
-        var profile = await patient.Client.GetFromJsonAsync<PatientDto>(ProfileUrl);
+        var response = await patient.Client.GetAsync(ProfileUrl);
+        var profile = await response.Content.ReadFromJsonAsync<PatientProfileDto>();
 
         profile!.PhoneNumber.Should().Be(phone);
         profile.Address!.Province.Should().Be("Ha Noi");
+        (await response.Content.ReadAsStringAsync()).Should().NotContain("medicalNotes");
     }
 
     [Fact]
@@ -108,7 +110,7 @@ public sealed class AuthorizationTests(DentalApiFactory factory)
         var response = await patient.Client.PutAsJsonAsync("/api/v1/me/address", new UpdateAddressRequest(address));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updated = await response.Content.ReadFromJsonAsync<PatientDto>();
+        var updated = await response.Content.ReadFromJsonAsync<PatientProfileDto>();
         updated!.Address.Should().Be(address);
     }
 

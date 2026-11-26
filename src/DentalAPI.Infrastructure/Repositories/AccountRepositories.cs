@@ -67,6 +67,14 @@ public sealed class PatientAccountRepository(DentalDbContext dbContext) : IPatie
             account => account.Email == email && account.IsEmailVerified && account.Id != excludeAccountId,
             cancellationToken);
 
+    // ExecuteDelete bypasses the soft-delete interceptor on purpose; see the interface for why this data is not kept.
+    // IgnoreQueryFilters so pending rows that were soft-deleted earlier are purged as well.
+    public Task<int> DeletePendingNotUpdatedSinceAsync(DateTimeOffset cutoff, CancellationToken cancellationToken) =>
+        dbContext.PatientAccounts
+            .IgnoreQueryFilters()
+            .Where(account => account.Status == PatientAccountStatus.PendingVerification && account.UpdatedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+
     public void Add(PatientAccount account) => dbContext.PatientAccounts.Add(account);
 
     public void Remove(PatientAccount account) => dbContext.PatientAccounts.Remove(account);

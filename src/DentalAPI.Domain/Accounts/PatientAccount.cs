@@ -12,6 +12,12 @@ public sealed class PatientAccount : Entity, IPasswordCredential
     public const int EmailMaxLength = 256;
     public const int PasswordHashMaxLength = 512;
 
+    /// <summary>
+    /// Unverified registrations hold personal details of someone who never proved they own the phone,
+    /// so they are deleted after this time.
+    /// </summary>
+    public static readonly TimeSpan PendingRegistrationLifetime = TimeSpan.FromHours(24);
+
     // Required by EF Core to materialize entities from the database.
     private PatientAccount()
     {
@@ -50,12 +56,18 @@ public sealed class PatientAccount : Entity, IPasswordCredential
     public static string? NormalizeEmail(string? email) =>
         string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 
+    /// <summary>Replaces the details of a pending registration when the same phone registers again.</summary>
+    public void RestartRegistration(string? email, string passwordHash, PendingPatientProfile pendingProfile)
+    {
+        EnsurePending();
+        Email = NormalizeEmail(email);
+        PasswordHash = passwordHash;
+        PendingProfile = pendingProfile;
+    }
+
     public void Activate(Guid patientId)
     {
-        if (IsActive)
-        {
-            throw new InvalidOperationException("The account is already active.");
-        }
+        EnsurePending();
 
         PatientId = patientId;
         Status = PatientAccountStatus.Active;
@@ -72,5 +84,13 @@ public sealed class PatientAccount : Entity, IPasswordCredential
     public void MarkEmailVerified()
     {
         IsEmailVerified = Email is not null;
+    }
+
+    private void EnsurePending()
+    {
+        if (IsActive)
+        {
+            throw new InvalidOperationException("The account is already active.");
+        }
     }
 }

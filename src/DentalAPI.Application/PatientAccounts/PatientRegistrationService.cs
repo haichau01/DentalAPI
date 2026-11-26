@@ -45,14 +45,19 @@ public sealed class PatientRegistrationService(
             throw new PhoneNumberAlreadyRegisteredException();
         }
 
+        var profile = new PendingPatientProfile(request.FullName, request.DateOfBirth, request.Address?.ToDomain());
+        var passwordHash = passwordHasher.Hash(request.Password);
+
+        // Reusing the pending row instead of soft-deleting it keeps no stale copy of the earlier details.
         var previousAttempt = await accountRepository.GetPendingByPhoneAsync(phoneNumber, cancellationToken);
         if (previousAttempt is not null)
         {
-            accountRepository.Remove(previousAttempt);
+            previousAttempt.RestartRegistration(request.Email, passwordHash, profile);
         }
-
-        var profile = new PendingPatientProfile(request.FullName, request.DateOfBirth, request.Address?.ToDomain());
-        accountRepository.Add(new PatientAccount(phoneNumber, request.Email, passwordHasher.Hash(request.Password), profile));
+        else
+        {
+            accountRepository.Add(new PatientAccount(phoneNumber, request.Email, passwordHash, profile));
+        }
 
         var codeExpiresAt = await verificationCodeService.SendAsync(VerificationChannel.Sms, phoneNumber, cancellationToken);
         return new PatientRegistrationDto(codeExpiresAt);
