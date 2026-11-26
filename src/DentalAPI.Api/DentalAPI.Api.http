@@ -1,0 +1,50 @@
+# Requests for manual testing. Works with the VS Code REST Client extension or Visual Studio.
+# Docker: http://localhost:8080   dotnet run: http://localhost:5228
+@baseUrl = http://localhost:8080
+@patientId = 00000000-0000-0000-0000-000000000000
+
+### Health check
+GET {{baseUrl}}/health
+
+### List patients
+GET {{baseUrl}}/api/v1/patients?page=1&pageSize=20
+
+### Get a patient
+GET {{baseUrl}}/api/v1/patients/{{patientId}}
+
+### Create a patient (fake data only)
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "fullName": "Pham Van D",
+  "dateOfBirth": "1995-03-20",
+  "phoneNumber": "0900000004",
+  "email": "d@example.com",
+  "medicalNotes": null
+}
+
+### Create a patient with invalid data -> 400
+POST {{baseUrl}}/api/v1/patients
+Content-Type: application/json
+
+{
+  "fullName": "",
+  "dateOfBirth": "2999-01-01",
+  "phoneNumber": "abc"
+}
+
+### Update a patient
+PUT {{baseUrl}}/api/v1/patients/{{patientId}}
+Content-Type: application/json
+
+{
+  "fullName": "Pham Van D",
+  "dateOfBirth": "1995-03-20",
+  "phoneNumber": "0900000005",
+  "email": null,
+  "medicalNotes": "Allergic to latex"
+}
+
+### Delete a patient
+DELETE {{baseUrl}}/api/v1/patients/{{patientId}}
