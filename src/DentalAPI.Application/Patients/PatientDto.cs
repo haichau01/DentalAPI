@@ -1,3 +1,4 @@
+using DentalAPI.Application.Common.Addresses;
 using DentalAPI.Domain.Patients;
 
 namespace DentalAPI.Application.Patients;
@@ -9,6 +10,7 @@ public sealed record PatientDto(
     string PhoneNumber,
     string? Email,
     string? MedicalNotes,
+    AddressDto? Address,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
@@ -19,6 +21,7 @@ public sealed record PatientDto(
         patient.PhoneNumber,
         patient.Email,
         patient.MedicalNotes,
+        AddressDto.FromDomain(patient.Address),
         patient.CreatedAt,
         patient.UpdatedAt);
 }

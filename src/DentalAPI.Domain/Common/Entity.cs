@@ -1,8 +1,8 @@
 namespace DentalAPI.Domain.Common;
 
 /// <summary>
-/// Base type for every persisted entity: identity, audit timestamps and soft delete.
-/// Timestamps are set by the persistence layer when changes are saved.
+/// Base type for every persisted entity: identity, audit timestamps, audit actor and soft delete.
+/// Audit fields are set by the persistence layer when changes are saved.
 /// </summary>
 public abstract class Entity
 {
@@ -12,25 +12,33 @@ public abstract class Entity
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>The account that created the record; null for anonymous actions such as self-registration.</summary>
+    public Guid? CreatedBy { get; private set; }
+
+    public Guid? UpdatedBy { get; private set; }
+
     public bool IsDeleted { get; private set; }
 
     public DateTimeOffset? DeletedAt { get; private set; }
 
-    public void MarkCreated(DateTimeOffset now)
+    public void MarkCreated(DateTimeOffset now, Guid? actorId)
     {
         CreatedAt = now;
         UpdatedAt = now;
+        CreatedBy = actorId;
+        UpdatedBy = actorId;
     }
 
-    public void MarkUpdated(DateTimeOffset now)
+    public void MarkUpdated(DateTimeOffset now, Guid? actorId)
     {
         UpdatedAt = now;
+        UpdatedBy = actorId;
     }
 
-    public void MarkDeleted(DateTimeOffset now)
+    public void MarkDeleted(DateTimeOffset now, Guid? actorId)
     {
         IsDeleted = true;
         DeletedAt = now;
-        UpdatedAt = now;
+        MarkUpdated(now, actorId);
     }
 }

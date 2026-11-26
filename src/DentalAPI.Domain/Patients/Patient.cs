@@ -31,12 +31,20 @@ public sealed class Patient : Entity
     /// <summary>Medical history and allergies the dentist must know before treatment.</summary>
     public string? MedicalNotes { get; private set; }
 
+    public Address? Address { get; private set; }
+
     public void UpdateDetails(PatientDetails details)
     {
         FullName = details.FullName.Trim();
         DateOfBirth = details.DateOfBirth;
-        PhoneNumber = details.PhoneNumber.Trim();
+        PhoneNumber = Common.PhoneNumber.Normalize(details.PhoneNumber);
         Email = details.Email?.Trim();
         MedicalNotes = details.MedicalNotes?.Trim();
+        Address = details.Address;
+    }
+
+    public void ChangeAddress(Address? address)
+    {
+        Address = address;
     }
 }

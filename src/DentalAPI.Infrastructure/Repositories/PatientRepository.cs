@@ -26,6 +26,13 @@ public sealed class PatientRepository(DentalDbContext dbContext) : IPatientRepos
         return new PagedResult<Patient>(items, query.Page, query.PageSize, totalCount);
     }
 
+    public async Task<IReadOnlyList<Guid>> ListUnlinkedIdsByPhoneAsync(string phoneNumber, CancellationToken cancellationToken) =>
+        await dbContext.Patients
+            .Where(patient => patient.PhoneNumber == phoneNumber)
+            .Where(patient => !dbContext.PatientAccounts.Any(account => account.PatientId == patient.Id))
+            .Select(patient => patient.Id)
+            .ToListAsync(cancellationToken);
+
     public void Add(Patient patient) => dbContext.Patients.Add(patient);
 
     public void Remove(Patient patient) => dbContext.Patients.Remove(patient);
